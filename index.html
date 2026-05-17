@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BioSync Aggregator — AI-Powered Database Union</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --color-black: #0a0e27;
+      --color-dark: #1a1f3a;
+      --color-dark-lighter: #252d4a;
+      --color-light-blue: #00d4ff;
+      --color-light-blue-dim: #00d4ff40;
+      --color-purple: #9945ff;
+      --color-purple-bright: #b366ff;
+      --color-purple-dim: #9945ff30;
+      --color-accent: #00d4ff;
+      --color-text: #e8ecff;
+      --color-text-dim: #b0b8e8;
+      --color-success: #00ff88;
+      --color-warning: #ffaa00;
+      --color-error: #ff4455;
+      --spacing-xs: 0.5rem;
+      --spacing-sm: 1rem;
+      --spacing-md: 1.5rem;
+      --spacing-lg: 2rem;
+      --spacing-xl: 3rem;
+      --border-radius: 12px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+      background: linear-gradient(135deg, var(--color-black) 0%, var(--color-dark) 100%);
+      color: var(--color-text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 50%, var(--color-purple-dim) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, var(--color-light-blue-dim) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    main {
+      position: relative;
+      z-index: 1;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: var(--spacing-xl);
+    }
+
+    /* ===== Header & Title ===== */
+    .header {
+      margin-bottom: var(--spacing-xl);
+      animation: slideInDown 0.6s ease-out;
+    }
+
+    @keyframes slideInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .header h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700;
+      letter-spacing: -1px;
+      margin-bottom: var(--spacing-sm);
+      background: linear-gradient(135deg, var(--color-light-blue) 0%, var(--color-purple-bright) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header p {
+      color: var(--color-text-dim);
+      font-size: 1rem;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    /* ===== Search Bar ===== */
+    .search-section {
+      margin-bottom: var(--spacing-xl);
+      animation: slideInUp 0.6s ease-out 0.1s both;
+    }
+
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .search-container {
+      display: flex;
+      gap: var(--spacing-md);
+      background: var(--color-dark-lighter);
+      border: 2px solid var(--color-light-blue-dim);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-md);
+      transition: var(--transition);
+      box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+    }
+
+    .search-container:focus-within {
+      border-color: var(--color-light-blue);
+      box-shadow: 0 8px 32px rgba(0, 212, 255, 0.25);
+    }
+
+    .search-icon {
+      font-size: 1.5rem;
+      color: var(--color-light-blue);
+      display: flex;
+      align-items: center;
+    }
+
+    .search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--color-text);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .search-input::placeholder {
+      color: var(--color-text-dim);
+    }
+
+    .search-btn {
+      background: linear-gradient(135deg, var(--color-light-blue) 0%, var(--color-purple) 100%);
+      color: var(--color-black);
+      border: none;
+      padding: var(--spacing-sm) var(--spacing-lg);
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: 0 4px 16px rgba(0, 212, 255, 0.3);
+    }
+
+    .search-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(0, 212, 255, 0.4);
+    }
+
+    .search-btn:active {
+      transform: translateY(0);
+    }
+
+    .search-btn.loading {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .search-btn.loading::after {
+      content: ' ⟳';
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* ===== Database Grid (6-pane) ===== */
+    .databases-section {
+      margin-bottom: var(--spacing-xl);
+      animation: fadeIn 0.6s ease-out 0.2s both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: var(--spacing-lg);
+      color: var(--color-light-blue);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .database-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .database-card {
+      background: var(--color-dark-lighter);
+      border: 2px solid var(--color-purple-dim);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-md);
+      transition: var(--transition);
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .database-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, var(--color-light-blue-dim), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .database-card:hover {
+      border-color: var(--color-light-blue);
+      box-shadow: 0 8px 24px rgba(153, 69, 255, 0.2);
+      transform: translateY(-4px);
+    }
+
+    .database-card:hover::before {
+      left: 100%;
+    }
+
+    .database-card-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
+      position: relative;
+      z-index: 1;
+    }
+
+    .database-icon {
+      font-size: 1.8rem;
+      color: var(--color-light-blue);
+    }
+
+    .database-name {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--color-text);
+    }
+
+    .database-status {
+      font-size: 0.8rem;
+      color: var(--color-success);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: auto;
+    }
+
+    .database-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .metric {
+      margin-bottom: var(--spacing-md);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 1px solid var(--color-purple-dim);
+    }
+
+    .metric:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .metric-label {
+      font-size: 0.85rem;
+      color: var(--color-text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.3rem;
+    }
+
+    .metric-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--color-light-blue);
+      font-family: 'Courier New', monospace;
+    }
+
+    .metric-subtext {
+      font-size: 0.8rem;
+      color: var(--color-text-dim);
+      margin-top: 0.3rem;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .tag {
+      background: var(--color-purple-dim);
+      color: var(--color-light-blue);
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      border: 1px solid var(--color-purple);
+    }
+
+    /* ===== AI Terminal Section ===== */
+    .ai-section {
+      animation: fadeIn 0.6s ease-out 0.3s both;
+    }
+
+    .terminal-container {
+      background: var(--color-black);
+      border: 2px solid var(--color-light-blue);
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      box-shadow: 0 12px 48px rgba(0, 212, 255, 0.15);
+    }
+
+    .terminal-header {
+      background: linear-gradient(90deg, var(--color-dark) 0%, var(--color-dark-lighter) 100%);
+      padding: var(--spacing-md);
+      border-bottom: 2px solid var(--color-light-blue);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .terminal-title {
+      font-weight: 600;
+      color: var(--color-light-blue);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .terminal-icon {
+      font-size: 1.3rem;
+    }
+
+    .terminal-status {
+      font-size: 0.8rem;
+      padding: 0.4rem 0.8rem;
+      background: var(--color-dark-lighter);
+      border: 1px solid var(--color-text-dim);
+      border-radius: 4px;
+      color: var(--color-text-dim);
+    }
+
+    .terminal-status.active {
+      background: var(--color-success);
+      color: var(--color-black);
+      border-color: var(--color-success);
+    }
+
+    .terminal-body {
+      padding: var(--spacing-lg);
+      max-height: 600px;
+      overflow-y: auto;
+      background: var(--color-black);
+      font-family: 'Courier New', monospace;
+      min-height: 300px;
+    }
+
+    .terminal-body::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .terminal-body::-webkit-scrollbar-track {
+      background: var(--color-dark);
+    }
+
+    .terminal-body::-webkit-scrollbar-thumb {
+      background: var(--color-light-blue-dim);
+      border-radius: 4px;
+    }
+
+    .terminal-body::-webkit-scrollbar-thumb:hover {
+      background: var(--color-light-blue);
+    }
+
+    .terminal-line {
+      margin-bottom: var(--spacing-sm);
+      line-height: 1.6;
+      animation: typeIn 0.3s ease-out forwards;
+      animation-fill-mode: both;
+    }
+
+    @keyframes typeIn {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .terminal-prompt {
+      color: var(--color-light-blue);
+      font-weight: 700;
+    }
+
+    .terminal-success {
+      color: var(--color-success);
+    }
+
+    .terminal-warning {
+      color: var(--color-warning);
+    }
+
+    .terminal-error {
+      color: var(--color-error);
+    }
+
+    .terminal-dim {
+      color: var(--color-text-dim);
+    }
+
+    .abstract-section {
+      margin: var(--spacing-md) 0;
+      padding: var(--spacing-md);
+      background: var(--color-dark-lighter);
+      border-left: 3px solid var(--color-light-blue);
+      border-radius: 4px;
+      line-height: 1.8;
+      color: var(--color-text);
+      font-size: 0.95rem;
+    }
+
+    .xref-section {
+      margin: var(--spacing-md) 0;
+    }
+
+    .xref-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--spacing-sm);
+      background: var(--color-dark);
+      border-left: 2px solid var(--color-purple);
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+    }
+
+    .xref-source {
+      color: var(--color-light-blue);
+      font-weight: 600;
+    }
+
+    .xref-count {
+      background: var(--color-purple-dim);
+      padding: 0.3rem 0.8rem;
+      border-radius: 4px;
+      color: var(--color-light-blue);
+      font-weight: 600;
+    }
+
+    .xref-desc {
+      color: var(--color-text-dim);
+      font-size: 0.85rem;
+    }
+
+    .safety-badge {
+      display: inline-block;
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: linear-gradient(135deg, var(--color-purple) 0%, var(--color-light-blue) 100%);
+      color: var(--color-black);
+      border-radius: 8px;
+      font-weight: 700;
+      margin: var(--spacing-md) 0;
+    }
+
+    .confidence-bar {
+      margin: var(--spacing-md) 0;
+      background: var(--color-dark);
+      border-radius: 4px;
+      overflow: hidden;
+      height: 24px;
+      border: 1px solid var(--color-light-blue-dim);
+    }
+
+    .confidence-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-light-blue) 0%, var(--color-purple) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-black);
+      font-weight: 700;
+      font-size: 0.8rem;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: var(--spacing-xl);
+      color: var(--color-text-dim);
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: var(--spacing-md);
+      opacity: 0.5;
+    }
+
+    .empty-state-text {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* ===== Loading State ===== */
+    .loader {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid var(--color-light-blue-dim);
+      border-radius: 50%;
+      border-top-color: var(--color-light-blue);
+      animation: spin 1s linear infinite;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 768px) {
+      main {
+        padding: var(--spacing-lg);
+      }
+
+      .header h1 {
+        font-size: 2rem;
+      }
+
+      .database-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .search-container {
+        flex-direction: column;
+      }
+
+      .terminal-body {
+        max-height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <!-- Header -->
+    <div class="header">
+      <h1>🧬 BioSync Aggregator</h1>
+      <p>AI-Powered Unified Query Across 6 Major Biological Databases</p>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section">
+      <div class="search-container">
+        <div class="search-icon">🔍</div>
+        <input 
+          type="text" 
+          id="searchInput" 
+          class="search-input" 
+          placeholder="Enter organism, gene, or sequence keyword (e.g., 'BRCA1', 'COVID-19', 'Arabidopsis')..."
+          autocomplete="off"
+        >
+        <button id="searchBtn" class="search-btn">QUERY DATABASES</button>
+      </div>
+    </div>
+
+    <!-- Database Grid Section -->
+    <div class="databases-section">
+      <h2 class="section-title">📊 Database Metrics (Real-time Aggregation)</h2>
+      <div id="databaseGrid" class="database-grid">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+
+    <!-- AI Terminal Section -->
+    <div class="ai-section">
+      <div class="terminal-container">
+        <div class="terminal-header">
+          <div class="terminal-title">
+            <span class="terminal-icon">⚡</span>
+            AI Synthesis Terminal
+          </div>
+          <div id="terminalStatus" class="terminal-status">STANDBY</div>
+        </div>
+        <div id="terminalBody" class="terminal-body">
+          <div class="empty-state">
+            <div class="empty-state-icon">✨</div>
+            <div class="empty-state-text">Enter a query to begin aggregation...</div>
+            <div class="empty-state-text" style="color: var(--color-text-dim); font-size: 0.85rem;">
+              Results will be synthesized from all 6 biological databases
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // =========================================================================
+    // DOM Elements
+    // =========================================================================
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const databaseGrid = document.getElementById('databaseGrid');
+    const terminalBody = document.getElementById('terminalBody');
+    const terminalStatus = document.getElementById('terminalStatus');
+
+    // Database configurations
+    const databases = [
+      { id: 'ncbi', name: 'NCBI', icon: '🔬', color: 'light-blue' },
+      { id: 'pirpdb', name: 'PIR-PDB', icon: '🧪', color: 'purple' },
+      { id: 'popset', name: 'POPSET', icon: '👥', color: 'light-blue' },
+      { id: 'bmbl', name: 'BMBL', icon: '⚠️', color: 'warning' },
+      { id: 'genbank', name: 'GENBANK', icon: '🧬', color: 'light-blue' },
+      { id: 'ddbj', name: 'DDBJ', icon: '📊', color: 'purple' }
+    ];
+
+    // =========================================================================
+    // API Communication
+    // =========================================================================
+    async function queryDatabases(query) {
+      if (!query.trim()) {
+        addTerminalLine('prompt', '> No query provided. Please enter a search term.');
+        return;
+      }
+
+      updateTerminalStatus('PROCESSING', false);
+      addTerminalLine('dim', `> Query initialized: "${query}"`);
+      addTerminalLine('dim', `> Connecting to 6 biological databases...`);
+
+      try {
+        const response = await fetch('http://localhost:3000/api/accumulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: query })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        updateUI(data);
+        updateTerminalStatus('SUCCESS', true);
+      } catch (error) {
+        addTerminalLine('error', `✗ Connection failed: ${error.message}`);
+        addTerminalLine('error', `  Ensure the backend is running on http://localhost:3000`);
+        updateTerminalStatus('ERROR', false);
+      }
+    }
+
+    // =========================================================================
+    // UI Rendering
+    // =========================================================================
+    function updateUI(data) {
+      const dbs = data.databases;
+      const aiData = data.ai_synthesis;
+
+      // Render database cards
+      databaseGrid.innerHTML = '';
+      databases.forEach(db => {
+        const dbData = dbs[db.id];
+        const card = createDatabaseCard(db, dbData);
+        databaseGrid.appendChild(card);
+      });
+
+      // Render AI synthesis in terminal
+      renderAISynthesis(aiData);
+
+      // Scroll terminal to top
+      terminalBody.scrollTop = 0;
+    }
+
+    function createDatabaseCard(dbConfig, dbData) {
+      const card = document.createElement('div');
+      card.className = 'database-card';
+
+      const header = document.createElement('div');
+      header.className = 'database-card-header';
+      header.innerHTML = `
+        <span class="database-icon">${dbConfig.icon}</span>
+        <span class="database-name">${dbConfig.name}</span>
+        <span class="database-status">${dbData.status}</span>
+      `;
+
+      const content = document.createElement('div');
+      content.className = 'database-content';
+
+      // Database-specific metrics
+      let metricsHTML = '';
+      if (dbConfig.id === 'ncbi') {
+        metricsHTML = `
+          <div class="metric">
+            <div class="metric-label">Records Found</div>
+            <div class="metric-value">${dbData.records_found.toLocaleString()}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Sequence Types</div>
+            <div class="tag-list">${dbData.sequence_type.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Response Time</div>
+            <div class="metric-value">${dbData.response_time_ms}ms</div>
+          </div>
+        `;
+      } else if (dbConfig.id === 'pirpdb') {
+        metricsHTML = `
+          <div class="metric">
+            <div class="metric-label">Protein Structures</div>
+            <div class="metric-value">${dbData.protein_structures.toLocaleString()}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Resolution Range</div>
+            <div class="metric-value" style="font-size: 1.1rem;">${dbData.resolution_range}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Methods</div>
+            <div class="tag-list">${dbData.structure_methods.map(m => `<span class="tag">${m}</span>`).join('')}</div>
+          </div>
+        `;
+      } else if (dbConfig.id === 'popset') {
+        metricsHTML = `
+          <div class="metric">
+            <div class="metric-label">Population Sets</div>
+            <div class="metric-value">${dbData.population_sets.toLocaleString()}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Genetic Markers</div>
+            <div class="metric-value">${(dbData.genetic_markers / 1000).toFixed(1)}k</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Heterozygosity</div>
+            <div class="metric-value">${dbData.diversity_metrics.heterozygosity}</div>
+          </div>
+        `;
+      } else if (dbConfig.id === 'bmbl') {
+        metricsHTML = `
+          <div class="metric">
+            <div class="metric-label">Safety Records</div>
+            <div class="metric-value">${dbData.biosafety_records.toLocaleString()}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Containment Level</div>
+            <div class="metric-value">BSL-${dbData.containment_level}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Regulatory Status</div>
+            <div class="metric-subtext">${dbData.regulatory_status}</div>
+          </div>
+        `;
+      } else if (dbConfig.id === 'genbank') {
+        metricsHTML = `
+          <div class="metric">
+            <div class="metric-label">Sequences</div>
+            <div class="metric-value">${(dbData.sequences / 1000).toFixed(1)}k</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Total Basepairs</div>
+            <div class="metric-value">${(dbData.total_bp / 1000000).toFixed(0)}Mbp</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Organisms</div>
+            <div class="metric-value">${dbData.organism_count}</div>
+          </div>
+        `;
+      } else if (dbConfig.id === 'ddbj') {
+        metricsHTML = `
+          <div class="metric">
+            <div class="metric-label">Entries</div>
+            <div class="metric-value">${(dbData.entries / 1000).toFixed(1)}k</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Data Holdings</div>
+            <div class="metric-value">${dbData.data_holdings}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Response Time</div>
+            <div class="metric-value">${dbData.response_time_ms}ms</div>
+          </div>
+        `;
+      }
+
+      content.innerHTML = metricsHTML;
+      card.appendChild(header);
+      card.appendChild(content);
+      return card;
+    }
+
+    function renderAISynthesis(aiData) {
+      clearTerminal();
+      addTerminalLine('prompt', '> AI ACCUMULATOR INITIALIZED');
+      addTerminalLine('success', '✓ All 6 databases queried successfully');
+      
+      addTerminalLine('dim', '');
+      addTerminalLine('dim', '─────────────────────────────────────────');
+      addTerminalLine('dim', ' UNIFIED RESEARCH ABSTRACT');
+      addTerminalLine('dim', '─────────────────────────────────────────');
+      addTerminalLine('dim', '');
+
+      const abstractDiv = document.createElement('div');
+      abstractDiv.className = 'abstract-section';
+      abstractDiv.innerHTML = `${aiData.abstract}`;
+      terminalBody.appendChild(abstractDiv);
+
+      addTerminalLine('dim', '');
+      addTerminalLine('dim', '─────────────────────────────────────────');
+      addTerminalLine('dim', ' CROSS-DATABASE REFERENCES');
+      addTerminalLine('dim', '─────────────────────────────────────────');
+      addTerminalLine('dim', '');
+
+      const xrefDiv = document.createElement('div');
+      xrefDiv.className = 'xref-section';
+      aiData.cross_references.forEach(xref => {
+        const item = document.createElement('div');
+        item.className = 'xref-item';
+        item.innerHTML = `
+          <div style="flex: 1;">
+            <div class="xref-source">${xref.source}</div>
+            <div class="xref-desc">${xref.description}</div>
+          </div>
+          <div class="xref-count">${xref.link_count}</div>
+        `;
+        xrefDiv.appendChild(item);
+      });
+      terminalBody.appendChild(xrefDiv);
+
+      addTerminalLine('dim', '');
+      addTerminalLine('dim', '─────────────────────────────────────────');
+      addTerminalLine('dim', ' SAFETY ASSESSMENT & CONFIDENCE');
+      addTerminalLine('dim', '─────────────────────────────────────────');
+      addTerminalLine('dim', '');
+
+      const safetyDiv = document.createElement('div');
+      safetyDiv.innerHTML = `<span class="safety-badge">⚠️ ${aiData.bmbl_safety_rating}</span>`;
+      terminalBody.appendChild(safetyDiv);
+
+      const confidenceDiv = document.createElement('div');
+      confidenceDiv.style.marginTop = 'var(--spacing-md)';
+      const confidenceValue = parseFloat(aiData.overall_confidence);
+      confidenceDiv.innerHTML = `
+        <div style="margin-bottom: 0.5rem; color: var(--color-text-dim); font-size: 0.9rem;">Confidence Level</div>
+        <div class="confidence-bar">
+          <div class="confidence-fill" style="width: ${confidenceValue}%">${aiData.overall_confidence}</div>
+        </div>
+      `;
+      terminalBody.appendChild(confidenceDiv);
+
+      addTerminalLine('dim', '');
+      addTerminalLine('success', `✓ Synthesis complete: ${aiData.total_records_aggregated} total records analyzed`);
+      addTerminalLine('dim', `  ${new Date(aiData.synthesis_timestamp).toLocaleString()}`);
+    }
+
+    // =========================================================================
+    // Terminal Utilities
+    // =========================================================================
+    function clearTerminal() {
+      terminalBody.innerHTML = '';
+    }
+
+    function addTerminalLine(type, text) {
+      const line = document.createElement('div');
+      line.className = 'terminal-line';
+
+      if (type === 'prompt') {
+        line.innerHTML = `<span class="terminal-prompt">${text}</span>`;
+      } else if (type === 'success') {
+        line.innerHTML = `<span class="terminal-success">${text}</span>`;
+      } else if (type === 'error') {
+        line.innerHTML = `<span class="terminal-error">${text}</span>`;
+      } else if (type === 'warning') {
+        line.innerHTML = `<span class="terminal-warning">${text}</span>`;
+      } else {
+        line.innerHTML = `<span class="terminal-dim">${text}</span>`;
+      }
+
+      terminalBody.appendChild(line);
+      terminalBody.scrollTop = terminalBody.scrollHeight;
+    }
+
+    function updateTerminalStatus(status, isActive = false) {
+      terminalStatus.textContent = status;
+      terminalStatus.classList.toggle('active', isActive);
+    }
+
+    // =========================================================================
+    // Event Listeners
+    // =========================================================================
+    searchBtn.addEventListener('click', () => {
+      const query = searchInput.value.trim();
+      if (query) {
+        searchBtn.disabled = true;
+        searchBtn.classList.add('loading');
+        queryDatabases(query);
+        setTimeout(() => {
+          searchBtn.disabled = false;
+          searchBtn.classList.remove('loading');
+        }, 500);
+      }
+    });
+
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        searchBtn.click();
+      }
+    });
+
+    // Initialize with example query on load
+    window.addEventListener('load', () => {
+      searchInput.value = 'BRCA1 tumor suppressor';
+      setTimeout(() => {
+        addTerminalLine('dim', '> Example query loaded. Click "QUERY DATABASES" or press Enter to begin.');
+      }, 500);
+    });
+  </script>
+</body>
+</html>
